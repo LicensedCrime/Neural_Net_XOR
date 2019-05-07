@@ -4,3 +4,7 @@
 # Setup
 + Just run the index.html
 + The result of "output_layer" should be close to the "outputs" array.
+
+# TODO
++ (visual presentation.... maybe some time...)
++ Make it more OOP style
