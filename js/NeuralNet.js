@@ -51,23 +51,23 @@ function NeuralNet(num_input, num_hidden, num_output) {
 
         var hidden_layer = m_hidden_matrix.dot(input);
         hidden_layer = hidden_layer.add(m_bias_hidden);
-        hidden_layer = hidden_layer.map(sigmoid);
+        hidden_layer = hidden_layer.map(this.activate);
 
         var output_layer = m_output_matrix.dot(hidden_layer);
         output_layer = output_layer.add(m_bias_output);
-        output_layer = output_layer.map(sigmoid);
+        output_layer = output_layer.map(this.activate);
 
         var output_error = target.substract(output_layer);
         
         // backpropagation
         var hidden_error = m_output_matrix.transpose().dot(output_error);
 
-        var output_delta = output_layer.map(dsigmoid);
+        var output_delta = output_layer.map(this.derivative);
         output_delta = output_delta.multiply(output_error);
         output_delta = output_delta.multiply(m_learning_rate);
         output_delta = output_delta.dot(hidden_layer.transpose());
 
-        var hidden_delta = hidden_layer.map(dsigmoid);
+        var hidden_delta = hidden_layer.map(this.derivative);
         hidden_delta = hidden_delta.multiply(hidden_error);
         hidden_delta = hidden_delta.multiply(m_learning_rate);
         hidden_delta = hidden_delta.dot(input.transpose());
