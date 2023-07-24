@@ -1,7 +1,189 @@
 <html>
     <head></head>
     <body>
-       <script src="js/Loader.js"></script> 
-       <script src="js/main.js"></script>
+        
+
+
+        <script>
+            function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
+            function dsigmoid(x) { return x * (1 - x); }
+
+            Array.prototype.print = function() {
+                var num_y = this.length;
+                var num_x = this[0].length;
+
+                var str = "[\n";
+
+                if(num_x > 0) {
+                    for(var y = 0; y < num_y; y++) {
+                        for(var x = 0; x < num_x; x++) {
+                            str += (" " + this[y][x]).padEnd(19);
+                        }
+                    }
+
+                    str += "\n]";
+                    console.log(str);
+                    return;
+                }
+
+                if(num_y > 0) {
+                    for(var x = 0; x < num_y; x++) {
+                        str += (" " + this[x]).padEnd(19);
+                    }
+
+                    str += "\n]";
+                    console.log(str);
+                    return;
+                }
+
+                console.log("[]");
+            };
+
+            Array.prototype.copyMat = function() {
+                var tmp = [], index = 0;
+                this.forEach(y => {
+                    tmp.push([]);
+
+                    y.forEach(x => tmp[index].push(x));
+
+                    index++;
+                });
+
+                return tmp;
+            };
+
+            Array.prototype.dot = function(arr) {
+                var arr_cols = arr[0].length;
+                var arr_rows = arr.length;
+                var num_rows = this.length;
+
+                if(this[0].length != arr_rows) {
+                    throw "rip dot" + this[0].length + " " + arr_rows;
+                }
+
+                var sum = 0;
+                var out = [];
+                for(var z = 0; z < num_rows; z++) {
+                    out[z] = [];
+
+                    for(var n = 0; n < arr_cols; n++) {
+                        sum = 0;
+
+                        for(var y = 0; y < arr_rows; y++) {
+                            sum += this[z][y] * arr[y][n];
+                        }
+
+                        out[z][n] = sum;
+                    }
+                }
+
+                return out;
+            };
+
+            Array.prototype.transpose = function() {
+                var num_cols = this[0].length;
+                var tmp = [], n = 0;
+                while(n < num_cols) { n++; tmp.push([]); }
+
+                for(var z = 0; z < num_cols; z++) {
+                    for(var y = 0; y < this.length; y++) {
+                        tmp[z].push(this[y][z]);
+                    }
+                }
+
+                return tmp;
+            };
+
+            Array.prototype.random = function(rows, cols) {
+                var out = [];
+                for(var y = 0; y < rows; y++) {
+                    out[y] = [];
+
+                    for(var x = 0; x < cols; x++) {
+                        out[y][x] = Math.random()
+                    }
+                }
+
+                return out;
+            };
+        </script>
+
+        <script>
+            var syn0 = [].random(3,4);
+            var syn1 = [].random(4,5);
+            var syn2 = [].random(5,1);
+
+            var n = 60000;
+            var layer0 = null;
+            var layer1 = null;
+            var layer2 = null;
+            var layer3 = null;
+
+            var layer3_err, layer3_delta,
+                layer2_err, layer2_delta,
+                layer1_err, layer1_delta;
+            var l_rate = 0.05;
+            var prev_err = 1; curr_err = 0;
+
+            var input = [
+                [0,0,1],
+                [0,1,1],
+                [1,0,1],
+                [1,1,1],
+            ];
+
+            var output = [
+                [0],
+                [1],
+                [1],
+                [0],
+            ];
+
+            while(n > 0) {
+                n--;
+
+                layer0 = input.copyMat();
+                layer1 = layer0.dot(syn0).map(row => row.map(x => sigmoid(x)));
+                layer2 = layer1.dot(syn1).map(row => row.map(x => sigmoid(x)));
+                layer3 = layer2.dot(syn2).map(row => row.map(x => sigmoid(x)));
+
+                layer3_err = output.map((row, i_row) => row.map((x, i_col) => x - layer3[i_row][i_col]));
+                curr_err = Math.abs(layer3_err.map(row => row.reduce((a,b) => Math.abs(a) + Math.abs(b))).reduce((a,b) => Math.abs(a) + Math.abs(b)));
+                if(n % 10000 == 0) {
+                    layer3_err.print();
+                    layer3.print();
+                    console.log(curr_err, l_rate);
+                }
+
+                /**
+                if(curr_err < 0.000001) {
+                    console.log("steps", 60000 - n);
+                    break;
+                }
+                **/
+
+                if(prev_err < curr_err) {
+                    l_rate *= 0.999;
+                } else {
+                    l_rate *= 1.001;
+                }
+
+                prev_err = curr_err;
+
+                layer3_delta = layer3_err.map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layer3[i_row][i_col])));
+
+                layer2_err = layer3_delta.dot(syn2.transpose());
+                layer2_delta = layer2_err.map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layer2[i_row][i_col])));
+
+                layer1_err = layer2_delta.dot(syn1.transpose());
+                layer1_delta = layer1_err.map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layer1[i_row][i_col])));
+
+                syn2 = syn2.map((row, i_row) => row.map((x, i_col) => x + l_rate * layer2.transpose().dot(layer3_delta)[i_row][i_col]));
+                syn1 = syn1.map((row, i_row) => row.map((x, i_col) => x + l_rate * layer1.transpose().dot(layer2_delta)[i_row][i_col]));
+                syn0 = syn0.map((row, i_row) => row.map((x, i_col) => x + l_rate * layer0.transpose().dot(layer1_delta)[i_row][i_col]));
+            }
+
+            layer3.print();
+        </script>
     </body>
 </html>

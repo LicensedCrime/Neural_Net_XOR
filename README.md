@@ -3,7 +3,7 @@
 
 # Setup
 + Just run the index.html
-+ The result of "output_layer" should be close to the "outputs" array.
++ The result of "layer3" should be close to the "output" array.
 
 # TODO
 + (visual presentation.... maybe some time...)
