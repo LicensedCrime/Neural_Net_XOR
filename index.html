@@ -1,16 +1,17 @@
 <html>
     <head></head>
     <body>
-        
-
-
         <script>
             function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
             function dsigmoid(x) { return x * (1 - x); }
 
-            Array.prototype.print = function() {
+            Array.prototype.print = function(title) {
                 var num_y = this.length;
                 var num_x = this[0].length;
+
+                if(!title) {
+                    title = "res";
+                }
 
                 var str = "[\n";
 
@@ -22,7 +23,7 @@
                     }
 
                     str += "\n]";
-                    console.log(str);
+                    console.log(title, str);
                     return;
                 }
 
@@ -32,11 +33,11 @@
                     }
 
                     str += "\n]";
-                    console.log(str);
+                    console.log(title, str);
                     return;
                 }
 
-                console.log("[]");
+                console.log(title, "[]");
             };
 
             Array.prototype.copyMat = function() {
@@ -109,81 +110,88 @@
         </script>
 
         <script>
-            var syn0 = [].random(3,4);
-            var syn1 = [].random(4,5);
-            var syn2 = [].random(5,1);
+            function ANN() {
+                var weights = null;
+                var layers = null;
+                var deltas = null;
+                var errors = null;
 
-            var n = 60000;
-            var layer0 = null;
-            var layer1 = null;
-            var layer2 = null;
-            var layer3 = null;
+                var l_rate = 0.05;
 
-            var layer3_err, layer3_delta,
-                layer2_err, layer2_delta,
-                layer1_err, layer1_delta;
-            var l_rate = 0.05;
-            var prev_err = 1; curr_err = 0;
+                this.format = function(args) {
+                    layers = [];
+                    weights = [];
 
-            var input = [
-                [0,0,1],
-                [0,1,1],
-                [1,0,1],
-                [1,1,1],
-            ];
+                    var prev_val = args[0];
+                    for(var i = 1; i < args.length; i++) {
+                        weights.push([].random(prev_val, args[i]));
+                        prev_val = args[i];
+                    }
 
-            var output = [
-                [0],
-                [1],
-                [1],
-                [0],
-            ];
+                    return this;
+                };
 
-            while(n > 0) {
+                this.feed = function(input) {
+                    layers[0] = input.copyMat();
+                    weights.forEach((w, i) => { 
+                        layers[i+1] = layers[i].dot(w).map(row => row.map(x => sigmoid(x))); 
+                    });
+                };
+
+                this.train = function(output) {
+                    errors = [];
+                    deltas = [];
+
+                    var n = layers.length - 1;
+                    errors[n] = output.map((row, i_row) => row.map((x, i_col) => x - layers[n][i_row][i_col]));
+                    deltas[n] = errors[n].map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layers[n][i_row][i_col])));
+
+                    n--;
+                    while(n > -1) {
+                        errors[n] = layers[n+1].dot(weights[n].transpose());
+                        deltas[n] = errors[n].map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layers[n][i_row][i_col])));
+
+                        n--;
+                    }
+
+                    weights = weights.map((w, i) => {
+                        return w.map((row, i_row) => row.map((x, i_col) => x + l_rate * layers[i].transpose().dot(deltas[i+1])[i_row][i_col]));
+                    });
+                };
+
+                this.get = function() { return layers[layers.length - 1]; };
+
+                this.print_error = function() {
+                    var e = errors[errors.length-1];
+                    e.print("error");
+                };
+            }
+        </script>
+
+        <script>
+            var nn = new ANN().format([8, 16, 8, 4]);
+
+            var input = [[
+                0,0,1,1, // value 1
+                0,1,0,1  // value 2
+            ]];
+
+            var output = [[ 0,1,1,0 ]];
+
+            var n = 20000;
+            while(n > 0){
                 n--;
 
-                layer0 = input.copyMat();
-                layer1 = layer0.dot(syn0).map(row => row.map(x => sigmoid(x)));
-                layer2 = layer1.dot(syn1).map(row => row.map(x => sigmoid(x)));
-                layer3 = layer2.dot(syn2).map(row => row.map(x => sigmoid(x)));
+                nn.feed(input);
+                nn.train(output);
 
-                layer3_err = output.map((row, i_row) => row.map((x, i_col) => x - layer3[i_row][i_col]));
-                curr_err = Math.abs(layer3_err.map(row => row.reduce((a,b) => Math.abs(a) + Math.abs(b))).reduce((a,b) => Math.abs(a) + Math.abs(b)));
-                if(n % 10000 == 0) {
-                    layer3_err.print();
-                    layer3.print();
-                    console.log(curr_err, l_rate);
+                if(n % 1000 == 0) {
+                    nn.print_error();
                 }
-
-                /**
-                if(curr_err < 0.000001) {
-                    console.log("steps", 60000 - n);
-                    break;
-                }
-                **/
-
-                if(prev_err < curr_err) {
-                    l_rate *= 0.999;
-                } else {
-                    l_rate *= 1.001;
-                }
-
-                prev_err = curr_err;
-
-                layer3_delta = layer3_err.map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layer3[i_row][i_col])));
-
-                layer2_err = layer3_delta.dot(syn2.transpose());
-                layer2_delta = layer2_err.map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layer2[i_row][i_col])));
-
-                layer1_err = layer2_delta.dot(syn1.transpose());
-                layer1_delta = layer1_err.map((row, i_row) => row.map((x, i_col) => x * dsigmoid(layer1[i_row][i_col])));
-
-                syn2 = syn2.map((row, i_row) => row.map((x, i_col) => x + l_rate * layer2.transpose().dot(layer3_delta)[i_row][i_col]));
-                syn1 = syn1.map((row, i_row) => row.map((x, i_col) => x + l_rate * layer1.transpose().dot(layer2_delta)[i_row][i_col]));
-                syn0 = syn0.map((row, i_row) => row.map((x, i_col) => x + l_rate * layer0.transpose().dot(layer1_delta)[i_row][i_col]));
             }
 
-            layer3.print();
+            nn.feed(input);
+            nn.get().print();
         </script>
     </body>
 </html>
