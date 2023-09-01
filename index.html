@@ -154,8 +154,10 @@
                         n--;
                     }
 
+                    var layer_t = null;
                     weights = weights.map((w, i) => {
-                        return w.map((row, i_row) => row.map((x, i_col) => x + l_rate * layers[i].transpose().dot(deltas[i+1])[i_row][i_col]));
+                        layer_t = layers[i].transpose();
+                        return w.map((row, i_row) => row.map((x, i_col) => x + l_rate * layer_t.dot(deltas[i+1])[i_row][i_col]));
                     });
                 };
 
