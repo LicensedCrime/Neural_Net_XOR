@@ -3,8 +3,10 @@
 
 # Setup
 + Just run the index.html
-+ The result of "layer3" should be close to the "output" array.
++ ANN:format([...]) formats the neural network, no matter how many layers or parameters you need.
++ ANN:feed(input) takes a 2-dimensional array as input.
++ ANN:train(output) takes a 2-dimensional array as input. weights get calculated based on the previous feed.
++ ANN:get() returns the output for the given feed.
 
 # TODO
 + (visual presentation.... maybe some time...)
-+ Make it more OOP style
