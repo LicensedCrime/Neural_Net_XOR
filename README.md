@@ -10,3 +10,5 @@
 
 # TODO
 + (visual presentation.... maybe some time...)
++ normalize values
++ customize activation function for any layer
